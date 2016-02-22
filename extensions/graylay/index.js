@@ -21,7 +21,7 @@ module.exports = function () {
 
   function implementsNodeInterface(type) {
     const interfaces = type.interfaces || [];
-    return !!interfaces.find(iface => iface.name === 'Node');
+    return !!interfaces.find(name => name === 'Node');
   }
 
   return {
