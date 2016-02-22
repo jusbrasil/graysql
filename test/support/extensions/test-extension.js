@@ -10,7 +10,7 @@ module.exports = function (GraysQL) {
     customMethod() {
       return GraysQL;
     },
-    onParseTypeField(payload) {
+    onGenerateField(payload) {
       if (this && this.options && this.options.increaseOnParseTypeField) {
         this.options.increaseOnParseTypeField += 1;
       }

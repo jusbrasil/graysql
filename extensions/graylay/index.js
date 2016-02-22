@@ -20,7 +20,8 @@ module.exports = function () {
   }
 
   function implementsNodeInterface(type) {
-    return !!type.interfaces().find(e => e.name === 'Node');
+    const interfaces = type.interfaces || [];
+    return !!interfaces.find(iface => iface.name === 'Node');
   }
 
   return {
@@ -33,7 +34,7 @@ module.exports = function () {
       this.registerInterface(nodeIface);
     },
 
-    onParseTypeField(payload) {
+    onGenerateField(payload) {
       const type = payload.type;
       const field = payload.field;
 

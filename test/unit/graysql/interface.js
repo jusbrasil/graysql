@@ -7,22 +7,23 @@ const DB = require('../../support/db');
 const TestEmployee = require('../../support/test-schema-dir/interfaces/employee');
 
 
-module.exports = function (Interface) {
+module.exports = function (parseInterface) {
 
-  describe('@Interface', function () {
+  describe('@parseInterface', function () {
     describe('#constructor', function () {
       it('should only accept a POJO as parameter', function () {
-        expect(() => new Interface('asfa')).to.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
-        expect(() => new Interface(x => x)).to.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
-        expect(() => new Interface({})).to.not.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
+        expect(() => parseInterface('asfa', {}, {})).to.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
+        expect(() => parseInterface(x => x, {}, {})).to.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
+        expect(() => parseInterface({}, {}, {})).to.not.throw(TypeError, /GraysQL Error: Expected rawInterface to be an object/);
       });
     });
+
     describe('#generate(types)', function () {
       let Employee;
-      let testEmployee
+      let testEmployee;
 
       let increaseOnParseInterfaceField = 1;
-      function onParseInterfaceField(payload) {
+      function onGenerateField(payload) {
         increaseOnParseInterfaceField += 1;
       }
 
@@ -39,18 +40,25 @@ module.exports = function (Interface) {
           })
         });
 
-        testEmployee = new Interface(TestEmployee(), { onParseInterfaceField: [onParseInterfaceField], onGenerateInterface: [onGenerateInterface] }).generate();
+        const listeners = {
+          onGenerateField: [onGenerateField],
+          onGenerateInterface: [onGenerateInterface]
+        };
+        const types = {};
+        testEmployee = parseInterface(TestEmployee(), types, listeners);
       });
 
-      it('should call onParseInterfaceField listeners', function () {
+      it('should call onGenerateField listeners', function () {
         testEmployee._typeConfig.fields();
         expect(increaseOnParseInterfaceField).to.be.above(1);
       });
+
       it('should call onGenerateInterface listeners', function () {
         expect(increaseOnGenerateInterface).to.be.above(1);
       });
+
       it('should generate a valid GraphQLInterfaceType', function () {
-        testEmployee = new Interface(TestEmployee()).generate();
+        testEmployee = parseInterface(TestEmployee(), {}, {});
         expect(testEmployee).to.include.keys(Object.keys(Employee));
         expect(testEmployee._typeConfig.fields()).to.include.keys(Object.keys(Employee._typeConfig.fields()));
       });

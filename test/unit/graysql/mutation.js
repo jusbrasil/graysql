@@ -6,14 +6,14 @@ const expect = require('chai').expect;
 const SimpleType = require('../../support/types/simple');
 
 
-module.exports = function (Mutation) {
+module.exports = function (parseMutation) {
 
   describe('@Mutation', function () {
     describe('#constructor', function () {
       it('should only accept a POJO as parameter', function () {
-        expect(() => new Mutation('asdfad')).to.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
-        expect(() => new Mutation(x => x)).to.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
-        expect(() => new Mutation({})).to.not.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
+        expect(() => parseMutation('asdfad', {}, {})).to.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
+        expect(() => parseMutation(x => x, {}, {})).to.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
+        expect(() => parseMutation({}, {}, {})).to.not.throw(TypeError, /GraysQL Error: Expected rawMutation to be an object/);
       });
     });
     describe('#generate(types)', function () {
@@ -22,14 +22,19 @@ module.exports = function (Mutation) {
       let Simple;
 
       let incrementOnParseMutationArg = 1;
-      function onParseMutationArg(payload) {
+      function onGenerateArg() {
         incrementOnParseMutationArg += 1;
       }
 
       let incrementOnGenerateMutation = 1;
-      function onGenerateMutation(payload) {
+      function onGenerateMutation() {
         incrementOnGenerateMutation += 1;
       }
+
+      const listeners = {
+        onGenerateArg: [onGenerateArg],
+        onGenerateMutation: [onGenerateMutation]
+      };
 
       before(function () {
         simpleMutation = SimpleType().mutations.createSimple;
@@ -42,48 +47,49 @@ module.exports = function (Mutation) {
       });
 
       beforeEach(function () {
-        mutation = new Mutation(simpleMutation, {
-          onParseMutationArg: [onParseMutationArg],
-          onGenerateMutation: [onGenerateMutation]
-        });
+        mutation = simpleMutation;
       });
 
-      it('should call onParseMutationArg listeners', function () {
-        mutation.generate({ Simple });
+      it('should call onGenerateArg listeners', function () {
+        parseMutation(mutation, { Simple }, listeners);
         expect(incrementOnParseMutationArg).to.be.above(1);
       });
+
       it('should call onGenerateMutation listeners', function () {
         expect(incrementOnGenerateMutation).to.be.above(1);
       });
+
       it('should replace all the types in the mutation with valid GraphQL types', function () {
-        expect(mutation.generate({ Simple }).type).to.equal(Simple);
+        expect(parseMutation(mutation, { Simple }, listeners).type).to.equal(Simple);
       });
+
       it('should generate non nullable arguments', function () {
         const expectedMutation = {
           type: Simple,
           args: {
             id: { type: new graphql.GraphQLNonNull(graphql.GraphQLInt) }
           },
-          resolve: (_, args) => { id: 1 }
+          resolve: () => ({ id: 1 })
         };
-        const testMutation = new Mutation({
+        const testMutation = parseMutation({
           type: 'Simple',
           args: {
             id: { type: 'Int!' }
           },
-          resolve: (_, args) => { id: 1 }
-        }).generate({ Simple });
+          resolve: () => ({ id: 1 })
+        }, { Simple }, listeners);
         expect(JSON.stringify(testMutation)).to.equal(JSON.stringify(expectedMutation));
       });
+
       it('should generate a valid mutation', function () {
         const manMutation = {
           type: Simple,
           args: {
             id: { type: graphql.GraphQLInt }
           },
-          resolve: (_, args) => { id: 1 }
+          resolve: () => ({ id: 1 })
         };
-        expect(JSON.stringify(mutation.generate({ Simple }))).to.equal(JSON.stringify(manMutation));
+        expect(JSON.stringify(parseMutation(mutation, { Simple }, listeners))).to.equal(JSON.stringify(manMutation));
       });
     });
   });

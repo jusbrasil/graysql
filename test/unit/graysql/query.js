@@ -6,15 +6,15 @@ const expect = require('chai').expect;
 const SimpleType = require('../../support/types/simple');
 
 
-module.exports = function (Query) {
+module.exports = function (parseQuery) {
 
-  describe('@Query', function () {
+  describe('@parseQuery', function () {
 
     describe('#constructor(rawQuery)', function () {
       it('should only accept a POJO as parameter', function () {
-        expect(() => new Query('asdfad')).to.throw(TypeError, /GraysQL Error/);
-        expect(() => new Query(x => x)).to.throw(TypeError, /GraysQL Error/);
-        expect(() => new Query({})).to.not.throw(TypeError, /GraysQL Error/);
+        expect(() => parseQuery('asdfad', {}, {})).to.throw(TypeError, /GraysQL Error/);
+        expect(() => parseQuery(x => x, {}, {})).to.throw(TypeError, /GraysQL Error/);
+        expect(() => parseQuery({}, {}, {})).to.not.throw(TypeError, /GraysQL Error/);
       });
     });
 
@@ -23,14 +23,19 @@ module.exports = function (Query) {
       let query;
 
       let increaseOnParseQueryArg = 1;
-      function onParseQueryArg(payload) {
+      function onGenerateArg() {
         increaseOnParseQueryArg += 1;
       }
 
       let increaseOnGenerateQuery = 1;
-      function onGenerateQuery(payload) {
+      function onGenerateQuery() {
         increaseOnGenerateQuery += 1;
       }
+
+      const listeners = {
+        onGenerateArg: [onGenerateArg],
+        onGenerateQuery: [onGenerateQuery]
+      };
 
       before(function () {
         Simple = new graphql.GraphQLObjectType({
@@ -40,22 +45,20 @@ module.exports = function (Query) {
           })
         });
 
-        query = new Query(SimpleType().queries.simple, {
-          onParseQueryArg: [onParseQueryArg],
-          onGenerateQuery: [onGenerateQuery]
-        });
+        query = SimpleType().queries.simple;
       });
 
-      it('should call onParseQueryArg listeners', function () {
-        query.generate({ Simple });
+      it('should call onGenerateArg listeners', function () {
+        parseQuery(query, { Simple }, listeners);
         expect(increaseOnParseQueryArg).to.be.above(1);
       });
+
       it('should call onGenerateQuery listeners', function () {
         expect(increaseOnGenerateQuery).to.be.above(1);
       });
 
       it('should replace all the types in the query with valid GraphQL types', function () {
-        expect(query.generate({ Simple }).type).to.equal(Simple);
+        expect(parseQuery(query, { Simple }, {}).type).to.equal(Simple);
       });
 
       it('should generate non nullable arguments', function () {
@@ -66,13 +69,13 @@ module.exports = function (Query) {
           },
           resolve: (_, args) => { id: 1 }
         };
-        const testQuery = new Query({
+        const testQuery = parseQuery({
           type: 'Simple',
           args: {
             id: { type: 'Int!' }
           },
           resolve: (_, args) => { id: 1 }
-        }).generate({ Simple });
+        }, { Simple }, {});
         expect(JSON.stringify(testQuery)).to.equal(JSON.stringify(expectedQuery));
       });
 
@@ -84,7 +87,7 @@ module.exports = function (Query) {
           },
           resolve: (_, args) => { id: 1 }
         };
-        expect(JSON.stringify(query.generate({ Simple }))).to.equal(JSON.stringify(manQuery));
+        expect(JSON.stringify(parseQuery(query, { Simple }, {}))).to.equal(JSON.stringify(manQuery));
       });
 
     });
