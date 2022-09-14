@@ -3,6 +3,7 @@ const Type = require('../lib/graysql/type');
 const Interface = require('../lib/graysql/interface');
 const Query = require('../lib/graysql/query');
 const Mutation = require('../lib/graysql/mutation');
+const Union = require('../lib/graysql/union');
 const LoadFromDir = require('../extensions/load-from-dir');
 const Graylay = require('../extensions/graylay');
 const Utils = require('../lib/utils');
@@ -15,6 +16,7 @@ describe('UNIT TESTS', function () {
     require('./unit/graysql/interface')(Interface);
     require('./unit/graysql/query')(Query);
     require('./unit/graysql/mutation')(Mutation);
+    require('./unit/graysql/union')(Union);
     require('./unit/graysql')(GraysQL);
     describe('@Utils', function () {
       require('./unit/utils')(Utils);
